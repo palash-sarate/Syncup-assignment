@@ -74,8 +74,26 @@ Welcome to the **Realtime Coaching Feed Application**, a high-performance, premi
       "messageId": "msg_f3b9c240-5a3d-4eb8-bb4e-7a1a2b3c4d5e",
       "createdAt": "2026-05-18T12:05:00.000Z"
     }
-  ]
+  }
+}
   ```
+
+---
+
+## 🔐 Identity & Access Control (Keycloak OIDC & RBAC)
+
+The application stack utilizes **Keycloak** (integrated via OIDC protocol and Direct-Grant authentication) to enforce secure role-based access control (RBAC):
+- **Coachee (Client)**: Users assigned the `client` role are granted access to the Client Dashboard (`client-app`) to browse feeds, view active coach catalogs, and toggle subscriptions. Email verification (`emailVerified: true`) is strictly mapped as an identity claim required to activate core dashboard subscriptions.
+- **Coach**: Users assigned the `coach` role can authenticate into the Coach Management Portal (`coach-app`) to publish new feeds, manage publisher status, and review active client metrics.
+- **API Gateways**: The backend Express OIDC middleware intercepts and validates incoming JWT bearer tokens, verifying signatures, scopes, and user roles dynamically.
+
+---
+
+## 💡 Subscriptions & Personalized Feed Orchestration
+
+1. **Reactive Subscription Toggling**: Clients can follow/unfollow coaches on the fly using a high-fidelity toggle button. This updates the MongoDB `subscriptions` schema and propagates the change in real-time.
+2. **Personalized Feed Aggregation**: The `GET /api/feed` endpoint resolves the authenticated client's active subscriptions and constructs a customized content feed displaying only items published by their subscribed coaches.
+3. **Websocket Feed Broadcasting**: When a coach publishes content on the Coach Portal, a websocket event is cast to active socket connections. The client-app dedupes, filters, and displays the content instantly if the client is subscribed to that coach, ensuring real-time interactivity.
 
 ---
 
