@@ -84,19 +84,16 @@ Welcome to the **Realtime Coaching Feed Application**, a high-performance, premi
 ```
 ├── backend/
 │   ├── config/             # Database and cache connections
-│   ├── controllers/        # Express handlers with Redis orchestration
-│   ├── models/             # Mongoose Schemas
+│   ├── controllers/        # Express handlers with Keycloak RBAC and Redis caching
+│   ├── models/             # Mongoose Schemas (Feed, Coach, Subscription)
 │   ├── routes/             # Express API routes
-│   ├── server.js           # Server initialization
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── app/            # Next.js Pages (Feed Dashboard, Admin Panel)
-│   │   ├── components/     # High-fidelity UI Cards, Skeletons, Navbar
-│   │   └── hooks/          # React useSocket hooks with deduplication
-│   └── package.json
-├── docker-compose.yml      # Run MongoDB & Redis with one command
-├── README.md               # Feature specs (This file)
+│   └── server.js           # Express + WebSocket server entry point
+├── client-app/             # Next.js Client Dashboard for coachees
+├── coach-app/              # Next.js Coach Management Portal for publishers
+├── keycloak/               # Keycloak Realm export and local container setup
+├── docker-compose.yml      # Multi-container orchestration (Mongo, Redis, Keycloak)
+├── startup.py              # Automated full-stack launch script
+├── README.md               # Feature specifications (This file)
 └── scalability_plan.md     # Production scalability guide
 ```
 
@@ -104,22 +101,56 @@ Welcome to the **Realtime Coaching Feed Application**, a high-performance, premi
 
 ## ⚡ Quick Start
 
-### Prerequisites
-- Node.js (v18+)
-- MongoDB & Redis (or Docker)
+For a reliable setup across different environments, it is highly recommended to use the automated python startup utility.
 
-### Run with Docker Compose
-To spin up MongoDB and Redis in the background:
+### Option A: The Recommended Automated Setup (Python Startup Script)
+
+The root folder contains a premium `startup.py` script that automatically checks dependencies, launches the Docker daemon, spins up all necessary databases/auth containers, installs dependencies using correct flags, runs database seeds, and starts all web servers concurrently:
+
+1. **Verify Prerequisites**:
+   - Ensure you have **Python 3**, **Docker Desktop**, and **Node.js (v18+)** installed.
+2. **Run Startup Utility**:
+   ```bash
+   python startup.py
+   ```
+3. **Access Portals**:
+   - **Client Portal**: `http://localhost:3000` (Login as `coachee` / `coachee`)
+   - **Coach Portal**: `http://localhost:3001` (Login as `coach` / `coach123`)
+
+---
+
+### Option B: Manual Setup
+
+If you prefer to configure the environment steps manually:
+
+#### 1. Spin up Databases & Keycloak
+Ensure Docker is active, then launch container services in the background:
 ```bash
 docker-compose up -d
 ```
 
-### Install Dependencies
-Navigate to both `backend/` and `frontend/` folders and run:
+#### 2. Install Project Dependencies
+Navigate to each repository folder and install dependencies:
 ```bash
+# In backend/
 npm install
+
+# In client-app/
+npm install --legacy-peer-deps
+
+# In coach-app/
+npm install --legacy-peer-deps
 ```
 
-### Start Servers
-- **Backend**: `npm run dev` (starts server on `http://localhost:5000`)
-- **Frontend**: `npm run dev` (starts client on `http://localhost:3000`)
+#### 3. Seed Database & Keycloak Users
+Run the backend seeding script to populate Mongo database collections and register Keycloak OIDC users:
+```bash
+cd backend
+node scripts/seed.js
+```
+
+#### 4. Launch Services
+Start the dev servers across terminal sessions:
+- **Backend API**: `npm run dev` in `backend/` (runs on `http://localhost:5000`)
+- **Client App**: `npm run dev` in `client-app/` (runs on `http://localhost:3000`)
+- **Coach App**: `npm run dev` in `coach-app/` (runs on `http://localhost:3001`)
