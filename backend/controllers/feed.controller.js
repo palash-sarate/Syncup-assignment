@@ -341,3 +341,19 @@ exports.unsubscribeCoach = async (req, res) => {
     return res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
+
+// @desc    Get current coach's own published posts
+// @route   GET /api/feed/my-posts
+// @access  Private (Coach role verified by Keycloak JWT)
+exports.getMyPosts = async (req, res) => {
+  try {
+    const coachUsername = (req.user?.preferred_username || 'sarah').toLowerCase();
+    console.log(`[DATABASE] Fetching past posts for coach: ${coachUsername}`);
+    const feeds = await Feed.find({ coachUsername }).sort({ createdAt: -1 });
+    return res.status(200).json(feeds);
+  } catch (error) {
+    console.error(`[API ERROR] GET /feed/my-posts failed: ${error.message}`);
+    return res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+

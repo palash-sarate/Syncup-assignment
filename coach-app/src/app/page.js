@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '../components/Navbar';
 import { FeedCard } from '../components/FeedCard';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../hooks/useSocket';
 import { 
   ShieldAlert, 
   Sparkles, 
@@ -14,12 +15,47 @@ import {
   UserCheck,
   Eye,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 
 export default function CoachDashboard() {
   const { authenticated, user, loading: authLoading, token, logout } = useAuth();
   const router = useRouter();
+
+  // Past Posts State
+  const [myPosts, setMyPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Live socket listeners for the coach's past posts feed
+  const handleNewFeedBroadcast = useCallback((newFeed) => {
+    const coachUsername = (userRef.current?.username || userRef.current?.preferred_username || 'sarah').toLowerCase();
+    const author = (newFeed.coachUsername || '').toLowerCase();
+    
+    if (author === coachUsername) {
+      setMyPosts(prev => {
+        if (prev.some(item => item._id === newFeed._id)) return prev;
+        return [newFeed, ...prev];
+      });
+    }
+  }, []);
+
+  const handleUpdateFeedBroadcast = useCallback((updatedFeed) => {
+    setMyPosts(prev =>
+      prev.map(item => item._id === updatedFeed._id ? updatedFeed : item)
+    );
+  }, []);
+
+  // Initialize socket connectivity hook
+  const { status: socketStatus, registerProcessedId } = useSocket(
+    handleNewFeedBroadcast,
+    handleUpdateFeedBroadcast
+  );
 
   // Form State
   const [title, setTitle] = useState('');
@@ -48,6 +84,37 @@ export default function CoachDashboard() {
       router.push('/login');
     }
   }, [authenticated, authLoading, router]);
+
+  const fetchMyPosts = async () => {
+    if (!token) return;
+    setPostsLoading(true);
+    try {
+      console.log('[API] Dispatching GET /api/feed/my-posts...');
+      const res = await fetch('http://localhost:5000/api/feed/my-posts', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('Failed to retrieve your published guidance.');
+      const data = await res.json();
+      setMyPosts(data);
+      
+      // Register all fetched feed messageIds in the socket deduplicator
+      data.forEach(item => {
+        registerProcessedId(item.messageId);
+      });
+    } catch (err) {
+      console.error('[API ERROR] Fetch past posts failed:', err);
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authenticated && token) {
+      fetchMyPosts();
+    }
+  }, [authenticated, token]);
 
   // Clear notifications automatically
   useEffect(() => {
@@ -189,6 +256,12 @@ export default function CoachDashboard() {
         throw new Error(errData.error || `Server responded with status ${res.status}`);
       }
 
+      const newFeed = await res.json();
+      setMyPosts(prev => {
+        if (prev.some(item => item._id === newFeed._id)) return prev;
+        return [newFeed, ...prev];
+      });
+
       // Success Reset
       setTitle('');
       setContent('');
@@ -222,7 +295,7 @@ export default function CoachDashboard() {
   if (authenticated && !user?.isCoach) {
     return (
       <div className="flex-1 flex flex-col min-h-screen bg-zinc-950 text-zinc-100">
-        <Navbar socketStatus="connected" />
+        <Navbar socketStatus={socketStatus} />
         
         <main className="flex-1 max-w-md w-full mx-auto px-4 flex flex-col justify-center pb-24">
           <div className="glass-panel rounded-2xl p-6 md:p-8 border border-white/5 space-y-6 text-center shadow-2xl relative">
@@ -267,7 +340,7 @@ export default function CoachDashboard() {
   // 3. Authorized Coach Panel Dashboard
   return (
     <div className="flex-1 flex flex-col pb-16 min-h-screen bg-zinc-950 text-zinc-100">
-      <Navbar socketStatus="connected" />
+      <Navbar socketStatus={socketStatus} />
 
       {/* Floating Notifications */}
       {successMsg && (
@@ -525,6 +598,52 @@ export default function CoachDashboard() {
             </p>
           </div>
 
+        </div>
+
+        {/* Your Past Published Posts */}
+        <div className="mt-16 border-t border-white/5 pt-12 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold text-white tracking-tight font-sans">
+                Your Published Guidance
+              </h2>
+              <p className="text-zinc-500 text-xs mt-1">
+                Real-time subscriber engagement and post states from your coaching history.
+              </p>
+            </div>
+            {/* Refresh Button */}
+            <button
+              onClick={fetchMyPosts}
+              disabled={postsLoading}
+              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 font-bold text-xs transition duration-150 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${postsLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh Feed</span>
+            </button>
+          </div>
+
+          {postsLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+              <span className="text-xs text-zinc-500">Retrieving past publications...</span>
+            </div>
+          ) : myPosts.length === 0 ? (
+            <div className="border border-dashed border-white/10 rounded-2xl p-12 text-center text-zinc-500 text-sm">
+              You haven't published any coaching guidance cards yet. Use the composer above to broadcast your first card!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myPosts.map((post) => (
+                <FeedCard
+                  key={post._id}
+                  feed={post}
+                  onVote={null} // Keep read-only/no interaction from the coach side
+                  onToggleWorkout={null}
+                  onIncrementGoal={null}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
       </main>

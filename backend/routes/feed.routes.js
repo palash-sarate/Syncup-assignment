@@ -9,6 +9,9 @@ router.get('/', feedController.getFeeds);
 // GET /api/feed/coaches - Search and list registered coaches (Public)
 router.get('/coaches', feedController.getCoaches);
 
+// GET /api/feed/my-posts - Get current coach's own published posts (Coach Private)
+router.get('/my-posts', verifyKeycloakToken('coach'), feedController.getMyPosts);
+
 // GET /api/feed/subscriptions - Get client's subscribed coach usernames (Client Private)
 router.get('/subscriptions', verifyKeycloakToken('client'), feedController.getSubscriptions);
 
