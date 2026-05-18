@@ -75,7 +75,6 @@ Welcome to the **Realtime Coaching Feed Application**, a high-performance, premi
       "createdAt": "2026-05-18T12:05:00.000Z"
     }
   }
-}
   ```
 
 ---
