@@ -161,6 +161,14 @@ def main():
     except subprocess.CalledProcessError as e:
         log(f"npm install failed: {e}", Colors.RED)
         sys.exit(1)
+    # 5.5 Run Seeding Script
+    log("Running database and Keycloak seeding script...", Colors.CYAN)
+    try:
+        subprocess.run(["node", "scripts/seed.js"], cwd=os.path.join(os.getcwd(), "backend"), shell=True, check=True)
+        log("Database and Keycloak populated successfully!", Colors.GREEN)
+    except subprocess.CalledProcessError as e:
+        log(f"Seeding failed: {e}", Colors.RED)
+        sys.exit(1)
 
     # 6. Launch Servers Concurrently
     log("Launching Express Backend, Client Portal, and Coach Portal...", Colors.HEADER)
