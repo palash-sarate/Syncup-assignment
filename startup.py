@@ -181,7 +181,7 @@ def main():
     attempts = 0
     while not check_keycloak_ready():
         attempts += 1
-        if attempts > 30:
+        if attempts > 90:
             log("Keycloak startup timed out! Please check Keycloak container logs.", Colors.RED)
             sys.exit(1)
         time.sleep(2)
