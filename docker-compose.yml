@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: syncup-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - syncup-network
+
+  redis:
+    image: redis:alpine
+    container_name: syncup-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - syncup-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.2
+    container_name: syncup-keycloak
+    command: start-dev --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
+    networks:
+      - syncup-network
+    depends_on:
+      - mongodb
+      - redis
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  syncup-network:
+    driver: bridge

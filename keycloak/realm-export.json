@@ -1,0 +1,96 @@
+{
+  "id": "coaching-realm",
+  "realm": "coaching-realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "coach",
+        "description": "Coach role allowed to publish and manage feed cards"
+      },
+      {
+        "name": "client",
+        "description": "Client role with access to view feeds and participate in interactive elements"
+      }
+    ]
+  },
+  "groups": [],
+  "clients": [
+    {
+      "clientId": "coaching-client",
+      "name": "Coaching Feed Client App",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "coach",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Coach",
+      "lastName": "Sarah",
+      "email": "coach@syncup.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "coach123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "coach"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "username": "client",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "client@syncup.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "client123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "client"
+      ],
+      "clientRoles": {}
+    }
+  ]
+}

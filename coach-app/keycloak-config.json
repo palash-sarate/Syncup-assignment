@@ -1,0 +1,5 @@
+{
+  "realm": "coaching-realm",
+  "authServerUrl": "http://localhost:8080",
+  "clientId": "coaching-client"
+}
