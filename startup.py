@@ -94,6 +94,35 @@ def install_npm_deps(folder_name):
     else:
         log(f"node_modules already present in {folder_name}.", Colors.GREEN)
 
+def kill_process_on_port(port):
+    if sys.platform == 'win32':
+        try:
+            # Run netstat to find the PID
+            output = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True, text=True)
+            pids = set()
+            for line in output.strip().split('\n'):
+                parts = line.split()
+                if len(parts) >= 5:
+                    pid = parts[-1]
+                    if pid.isdigit() and pid != '0':
+                        pids.add(pid)
+            for pid in pids:
+                log(f"Port {port} is in use by PID {pid}. Terminating process...", Colors.YELLOW)
+                # Use taskkill /F /PID on Windows
+                subprocess.run(f"taskkill /F /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            pass # No process found on this port
+    else:
+        try:
+            # On Unix-like systems
+            output = subprocess.check_output(f"lsof -t -i:{port}", shell=True, text=True)
+            for pid in output.strip().split('\n'):
+                if pid:
+                    log(f"Port {port} is in use by PID {pid}. Terminating process...", Colors.YELLOW)
+                    subprocess.run(f"kill -9 {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            pass
+
 def run_logs_stream(process, prefix, color):
     for line in iter(process.stdout.readline, ''):
         if line:
@@ -103,6 +132,11 @@ def main():
     log("===================================================", Colors.HEADER)
     log("  Starting SyncUp Realtime Coaching Feed Platform   ", Colors.HEADER, Colors.BOLD)
     log("===================================================", Colors.HEADER)
+
+    # 0. Clean up port conflicts from orphaned processes
+    log("Checking and clearing ports 5000, 3000, 3001...", Colors.CYAN)
+    for port in [5000, 3000, 3001]:
+        kill_process_on_port(port)
 
     # 1. Prerequisites Check
     log("Checking prerequisites...", Colors.CYAN)
